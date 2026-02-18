@@ -24,7 +24,9 @@ Widget is fully functional with:
 - `ThemeManager.lua` - Theme switching logic
 - `UsageManager.lua` - Parses usage data and updates variables
 - `FetchUsage.ps1` - PowerShell script to fetch usage from Claude API
-- `usage_cache.txt` - Cached usage data from API
+- `usage-cache.json` - Cached usage data from API (written to `~/.claude/`)
+- `ToggleDesktopIcons.ps1` - PowerShell script to toggle desktop icon visibility
+- `THEME_GUIDE.txt` - Theme color system documentation
 
 ## Notes
 - Right-click widget to refresh/reload
