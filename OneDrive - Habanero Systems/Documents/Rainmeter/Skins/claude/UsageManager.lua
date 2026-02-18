@@ -11,18 +11,18 @@ function Update()
 end
 
 function UpdateUsage()
-    local cachePath = os.getenv("USERPROFILE") .. "\\.claude\\usage-cache.json"
-    local file = io.open(cachePath, "r")
+    local cachePath = os.getenv('USERPROFILE') .. '\\.claude\\usage-cache.json'
+    local file = io.open(cachePath, 'r')
 
     if not file then
         -- No cache file yet, use defaults
         return
     end
 
-    local content = file:read("*all")
+    local content = file:read('*all')
     file:close()
 
-    if not content or content == "" then
+    if not content or content == '' then
         return
     end
 
@@ -57,9 +57,9 @@ function UpdateUsage()
 
     -- Update subscription badge
     if subscriptionType then
-        local badge = "Pro"
-        if subscriptionType == "max" then
-            badge = "Max"
+        local badge = 'Pro'
+        if subscriptionType == 'max' then
+            badge = 'Max'
         end
         SKIN:Bang('!SetVariable', 'SubscriptionBadge', badge)
     end

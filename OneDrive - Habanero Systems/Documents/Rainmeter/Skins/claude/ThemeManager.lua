@@ -1,3 +1,6 @@
+-- ThemeManager.lua
+-- Manages theme cycling and applies color variables to Rainmeter meters
+
 function Initialize()
     ApplyTheme()
 end
