@@ -1,0 +1,104 @@
+#!/bin/sh
+#
+# commit-msg hook — normalize commit message format
+#
+# Rules (each toggleable via commit-msg.conf):
+#   capitalize      — uppercase the first letter of the subject (after optional number prefix)
+#   strip-period    — remove trailing period(s) from the subject line
+#   max-length      — warn (not block) if the subject exceeds 72 characters
+#   strip-whitespace — remove trailing whitespace from every line
+#
+# Works alongside prepare-commit-msg which may prepend a number prefix (e.g. "42 ").
+
+COMMIT_MSG_FILE="$1"
+
+# ---------------------------------------------------------------------------
+# Load configuration
+# ---------------------------------------------------------------------------
+# Resolve config path relative to the directory this hook lives in,
+# so it works correctly under core.hooksPath on WSL and elsewhere.
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+CONF_FILE="$HOOK_DIR/commit-msg.conf"
+
+cfg_capitalize=true
+cfg_strip_period=true
+cfg_max_length=true
+cfg_strip_whitespace=true
+
+if [ -f "$CONF_FILE" ]; then
+    while IFS='=' read -r key value; do
+        # skip blank lines and comments
+        case "$key" in
+            ""|\#*) continue ;;
+        esac
+        # trim surrounding whitespace from key and value
+        key=$(echo "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        case "$key" in
+            capitalize)       cfg_capitalize="$value" ;;
+            strip-period)     cfg_strip_period="$value" ;;
+            max-length)       cfg_max_length="$value" ;;
+            strip-whitespace) cfg_strip_whitespace="$value" ;;
+        esac
+    done < "$CONF_FILE"
+fi
+
+# ---------------------------------------------------------------------------
+# Read the commit message
+# ---------------------------------------------------------------------------
+MSG=$(cat "$COMMIT_MSG_FILE")
+SUBJECT=$(echo "$MSG" | head -1)
+BODY=$(echo "$MSG" | tail -n +2)
+
+# ---------------------------------------------------------------------------
+# Detect optional number prefix added by prepare-commit-msg (e.g. "42 ")
+# ---------------------------------------------------------------------------
+PREFIX=""
+TEXT="$SUBJECT"
+if echo "$SUBJECT" | grep -qE '^[0-9]+ '; then
+    PREFIX=$(echo "$SUBJECT" | sed 's/^\([0-9]* \).*/\1/')
+    TEXT=$(echo "$SUBJECT" | sed 's/^[0-9]* //')
+fi
+
+# ---------------------------------------------------------------------------
+# Apply rules to the subject text
+# ---------------------------------------------------------------------------
+
+# 1. Capitalize the first letter
+if [ "$cfg_capitalize" = "true" ] && [ -n "$TEXT" ]; then
+    FIRST=$(echo "$TEXT" | cut -c1 | tr '[:lower:]' '[:upper:]')
+    REST=$(echo "$TEXT" | cut -c2-)
+    TEXT="${FIRST}${REST}"
+fi
+
+# 2. Strip trailing period(s)
+if [ "$cfg_strip_period" = "true" ]; then
+    TEXT=$(echo "$TEXT" | sed 's/\.\+$//')
+fi
+
+# Reassemble the subject line
+SUBJECT="${PREFIX}${TEXT}"
+
+# 3. Strip trailing whitespace from every line
+if [ "$cfg_strip_whitespace" = "true" ]; then
+    SUBJECT=$(echo "$SUBJECT" | sed 's/[[:space:]]*$//')
+    BODY=$(echo "$BODY" | sed 's/[[:space:]]*$//')
+fi
+
+# 4. Warn if subject exceeds 72 characters (does not block)
+if [ "$cfg_max_length" = "true" ]; then
+    LENGTH=$(echo "$SUBJECT" | wc -c)
+    LENGTH=$((LENGTH - 1))  # subtract trailing newline counted by wc -c
+    if [ "$LENGTH" -gt 72 ]; then
+        echo "warning: commit subject is $LENGTH characters (recommended max: 72)" >&2
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Write the normalized message back
+# ---------------------------------------------------------------------------
+if [ -n "$BODY" ]; then
+    printf '%s\n%s\n' "$SUBJECT" "$BODY" > "$COMMIT_MSG_FILE"
+else
+    printf '%s\n' "$SUBJECT" > "$COMMIT_MSG_FILE"
+fi
